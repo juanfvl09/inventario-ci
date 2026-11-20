@@ -1,6 +1,6 @@
 // =============================================================
 // Pipeline declarativo — Curso Integración Continua · U2 / E4
-// Etapas: pruebas dentro de un contenedor -> imagen Docker -> prueba de humo
+// Etapas: análisis estático -> pruebas dentro de un contenedor -> imagen Docker -> prueba de humo
 // =============================================================
 pipeline {
   agent none
@@ -12,6 +12,18 @@ pipeline {
     IMAGEN = "inventario:${env.BUILD_NUMBER}"
   }
   stages {
+    stage('Análisis estático') {
+      // ruff revisa errores y estilo antes de gastar tiempo en pruebas
+      agent { docker { image 'python:3.12-slim' } }
+      steps {
+        sh '''
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --quiet -r requirements-dev.txt
+          ruff check src tests
+        '''
+      }
+    }
     stage('Pruebas unitarias') {
       // Jenkins crea un contenedor efímero solo para esta etapa y lo elimina al final
       agent { docker { image 'python:3.12-slim' } }
